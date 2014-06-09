@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.teusoft.bluetoothbulb;
+package com.teusoft.bluetoothbulb.service;
 
 import android.app.Service;
 import android.bluetooth.*;
@@ -145,7 +145,7 @@ public class BluetoothLeService extends Service {
     }
 
     public class LocalBinder extends Binder {
-        BluetoothLeService getService() {
+        public BluetoothLeService getService() {
             return BluetoothLeService.this;
         }
     }

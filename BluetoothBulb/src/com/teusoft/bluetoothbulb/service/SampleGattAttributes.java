@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.teusoft.bluetoothbulb;
+package com.teusoft.bluetoothbulb.service;
 
 import java.util.HashMap;
 

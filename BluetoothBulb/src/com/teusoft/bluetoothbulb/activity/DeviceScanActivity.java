@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.teusoft.bluetoothbulb;
+package com.teusoft.bluetoothbulb.activity;
 
 import android.app.Activity;
 import android.app.ListActivity;
@@ -31,6 +31,7 @@ import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+import com.teusoft.bluetoothbulb.R;
 
 import java.util.ArrayList;
 

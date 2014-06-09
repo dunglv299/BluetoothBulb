@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.teusoft.bluetoothbulb;
+package com.teusoft.bluetoothbulb.activity;
 
 import android.app.Activity;
 import android.bluetooth.BluetoothGattCharacteristic;
@@ -27,8 +27,11 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.ToggleButton;
-import com.larswerkman.holocolorpicker.*;
-import com.teusoft.bluetoothbulb.utils.Utils;
+import com.larswerkman.holocolorpicker.ColorPicker;
+import com.teusoft.bluetoothbulb.R;
+import com.teusoft.bluetoothbulb.business.Command;
+import com.teusoft.bluetoothbulb.service.BluetoothLeService;
+import com.teusoft.bluetoothbulb.thread.StrobeThread;
 
 import java.util.ArrayList;
 
@@ -53,8 +56,10 @@ public class MainActivity extends Activity implements View.OnClickListener, Colo
     private boolean mConnected = false;
     private BluetoothGattCharacteristic mNotifyCharacteristic;
     private ToggleButton mTogglePower;
+    private ToggleButton mStrobeBtn;
     byte[] value;
     ColorPicker picker;
+    private StrobeThread mStrobeThread;
 
 
     // Code to manage Service lifecycle.
@@ -83,7 +88,7 @@ public class MainActivity extends Activity implements View.OnClickListener, Colo
             final String action = intent.getAction();
             if (BluetoothLeService.ACTION_GATT_CONNECTED.equals(action)) {
                 mConnected = true;
-                updateConnectionState(R.string.connected);
+                updateConnectionState(com.teusoft.bluetoothbulb.R.string.connected);
                 invalidateOptionsMenu();
             } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
                 mConnected = false;
@@ -96,7 +101,7 @@ public class MainActivity extends Activity implements View.OnClickListener, Colo
             } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
 //                displayData(intent.getStringExtra(BluetoothLeService.EXTRA_DATA));
                 //TODO start control in here
-                Log.e("ACTION_DATA_AVAILABLE","ACTION_DATA_AVAILABLE");
+                Log.e("ACTION_DATA_AVAILABLE", "ACTION_DATA_AVAILABLE");
             }
         }
     };
@@ -124,10 +129,12 @@ public class MainActivity extends Activity implements View.OnClickListener, Colo
         mConnectionState = (TextView) findViewById(R.id.connection_state);
         mTogglePower = (ToggleButton) findViewById(R.id.power_btn);
         mTogglePower.setOnClickListener(this);
+        mStrobeBtn = (ToggleButton) findViewById(R.id.strobe_btn);
+        mStrobeBtn.setOnClickListener(this);
         // Init color picker
         picker = (ColorPicker) findViewById(R.id.picker);
         picker.setOnColorChangedListener(this);
-     }
+    }
 
     @Override
     protected void onResume() {
@@ -207,23 +214,22 @@ public class MainActivity extends Activity implements View.OnClickListener, Colo
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.power_btn:
+                // Power button
                 if (mTogglePower.isChecked()) {
-                    value = new byte[]{(byte) 0XCC, (byte) 0X24, (byte) 0X33};
-                    mBluetoothLeService.writeCharacteristic(value);
+                    Command.powerOff(mBluetoothLeService);
                 } else {
-                    value = new byte[]{(byte) 0XCC, (byte) 0X23, (byte) 0X33};
-                    mBluetoothLeService.writeCharacteristic(value);
+                    Command.powerOn(mBluetoothLeService);
+                }
+                break;
+            // Strobe button
+            case R.id.strobe_btn:
+                if (mStrobeBtn.isChecked()) {
+                    stopStrobe();
+                } else {
+                    startStrobe();
                 }
                 break;
         }
-    }
-
-
-    public void sendColor(String hex) {
-        byte[] rgbColor = Utils.hexStringToByteArray(hex);
-        value = new byte[]{(byte) 0X56, rgbColor[0], rgbColor[1], rgbColor[2], (byte) 0x29,
-                (byte) 0xF0, (byte) 0XAA};
-        mBluetoothLeService.writeCharacteristic(value);
     }
 
 
@@ -231,8 +237,28 @@ public class MainActivity extends Activity implements View.OnClickListener, Colo
     public void onColorChanged(int color) {
         String hexColor = String.format("#%06X", (0xFFFFFF & color));
         Log.e("hexColor", hexColor);
-        if (mBluetoothLeService!=null) {
-            sendColor(hexColor);
+        if (mBluetoothLeService != null) {
+            Command.sendColor(mBluetoothLeService, hexColor);
+        }
+    }
+
+    /**
+     * Start strobe light
+     */
+    private void startStrobe() {
+        if (mStrobeThread == null) {
+            mStrobeThread = new StrobeThread(mBluetoothLeService);
+            mStrobeThread.start();
+        }
+    }
+
+    /**
+     * Stop strobe light
+     */
+    private void stopStrobe() {
+        if (mStrobeThread != null) {
+            mStrobeThread.stopStrobeThread();
+            mStrobeThread = null;
         }
     }
 }
